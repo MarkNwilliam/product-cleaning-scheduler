@@ -106,5 +106,20 @@ class Water(unittest.TestCase):
         self.assertEqual(c.to_hhmm(1440), "00:00")
 
 
+class Remark(unittest.TestCase):
+    def test_cleaning_remark(self):
+        comps = c.components("SMG-150L")
+        r1 = c.schedule(comps, people=1, start_min=360)
+        r2 = c.schedule(comps, people=2, start_min=360)
+        w = c.water_totals(comps)
+        text = c.cleaning_remark("Saizoner Mixer Granulator (SMG)", "SMG-150L", "OI-04",
+                                 "11.09.2026", "8841", "06:00", r2, w,
+                                 one_person_makespan=r1["makespan"])
+        for t in ["PRODUCT CHANGE CLEANING RECORD", "SMG-150L", "SOP: OI-04",
+                  "crew of 2 persons", "Total validated scrubbing time",
+                  "saved", "Teepol", "Quality Assurance"]:
+            self.assertIn(t, text)
+
+
 if __name__ == "__main__":
     unittest.main()

@@ -4,7 +4,7 @@
 
 **Granulation changeover cleaning, scheduled. Pick the equipment and model, give a start time, and every component gets a From and To as hh:mm. The validated scrubbing time never changes, so adding people only parallelises the work and shortens the finish.**
 
-[![Tests](https://img.shields.io/badge/tests-20%20passing-green)](#)
+[![Tests](https://img.shields.io/badge/tests-21%20passing-green)](#)
 [![Python](https://img.shields.io/badge/python-3.9%2B-blue)](#)
 [![Deps](https://img.shields.io/badge/deps-none-brightgreen)](#)
 [![License](https://img.shields.io/badge/license-MIT-green)](#)
@@ -20,7 +20,7 @@
 
 Product to product changeover cleaning has to respect the validated scrubbing time for every component, and it still has to finish as early as the shift allows. This tool holds the cleaning parameters for the granulation equipment, the Saizoner Mixer Granulator models SMG-1300L, SMG-1000L and SMG-150L (SOP OI-04), the Fluid Bed models FBE-1300L, FBE-800L and FBE-125L (SOP OI-05), the Gerteis Roll Compactor Macro-Pactor (SOP OI-30), the Conical Sieve Mill (SOP OI-36) and the Quadro Co-Mill U 20 (SOP OI-32). For each component it carries the potable water first wash, the 0.1 percent Teepol volume, the validated scrubbing time, the potable water second wash and the purified water final rinse.
 
-Give a start time and a crew size and the schedule lays itself out. One person cleans the components one after another. Add a second person and the longest tasks start first, each next task going to whoever is free soonest, so the finish comes in earlier without touching a single validated scrubbing time. Add more people and the finish keeps dropping until there are as many people as there are components.
+The tool also writes a professional product change cleaning record for the logbook, with the equipment, model and SOP, the crew, the total validated scrubbing time, the finish and elapsed time, the minutes saved by working in parallel, the water and Teepol totals, and an operator and QA signature line. Give a start time and a crew size and the schedule lays itself out. One person cleans the components one after another. Add a second person and the longest tasks start first, each next task going to whoever is free soonest, so the finish comes in earlier without touching a single validated scrubbing time. Add more people and the finish keeps dropping until there are as many people as there are components.
 
 ## How the schedule is built
 
@@ -51,7 +51,7 @@ c.water_totals(comps)                      # potable, Teepol and purified totals
 product-cleaning-scheduler/
 ├── index.html                 # interactive scheduler (open this)
 ├── cleaning_scheduler.py      # equipment data, scheduling and water totals
-├── test_cleaning_scheduler.py # 20 unit tests
+├── test_cleaning_scheduler.py # 21 unit tests
 ├── docs/                      # README preview screenshot
 └── README.md
 ```

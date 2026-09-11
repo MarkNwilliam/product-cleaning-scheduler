@@ -198,3 +198,33 @@ def water_totals(tasks):
         "potable2_kg": round(sum(t["p2"] for t in tasks), 1),
         "purified_kg": round(sum(t["pure"] for t in tasks), 1),
     }
+
+
+def cleaning_remark(equipment, model, sop, date, batch, start_hhmm, result, water,
+                    one_person_makespan=None):
+    """Professional product change cleaning record for the logbook."""
+    n = len(result["assignments"])
+    crew = result["people"]
+    p = []
+    p.append("PRODUCT CHANGE CLEANING RECORD")
+    p.append(f"Equipment: {equipment} | Model: {model} | SOP: {sop}"
+             + (f" | Date: {date}" if date else "")
+             + (f" | Batch: {batch}" if batch else "") + ".")
+    p.append(f"Cleaning started at {start_hhmm} with a crew of {crew} "
+             f"{'person' if crew == 1 else 'persons'}.")
+    p.append(f"Components cleaned: {n}. Total validated scrubbing time: "
+             f"{round(result['total_min'], 1)} min. Cleaning completed at {result['finish']}, "
+             f"an elapsed {round(result['makespan'])} min.")
+    if one_person_makespan and one_person_makespan > result["makespan"]:
+        p.append(f"Working {crew} in parallel saved "
+                 f"{round(one_person_makespan - result['makespan'])} min against a single person, "
+                 f"with every validated scrubbing time maintained.")
+    else:
+        p.append("Every validated scrubbing time was maintained.")
+    p.append(f"Water and detergent: {water['potable1_kg']} kg potable water first wash, "
+             f"{water['teepol_ml']} ml of 0.1 percent v/v Teepol solution, "
+             f"{water['potable2_kg']} kg potable water second wash and "
+             f"{water['purified_kg']} kg purified water final rinse.")
+    p.append("Cleaned by: ____________________ Operator    "
+             "Verified by: ____________________ Quality Assurance")
+    return " ".join(p)
