@@ -1,0 +1,192 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Product Cleaning Scheduler</title>
+<style>
+  :root{--ink:#0f172a;--muted:#64748b;--brand:#0e7490;--brand2:#155e75;--ok:#16a34a;--warn:#d97706;--bad:#dc2626;--line:#e2e8f0;--card:#fff}
+  *{box-sizing:border-box;margin:0;padding:0}
+  body{font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,Arial,sans-serif;color:var(--ink);background:#f1f5f9;line-height:1.5}
+  header{background:linear-gradient(135deg,#0e7490,#155e75);color:#fff;padding:26px 30px}
+  header h1{font-size:22px;font-weight:800}
+  header p{font-size:13px;opacity:.93;margin-top:4px;max-width:1000px}
+  .wrap{max-width:1280px;margin:0 auto;padding:22px 24px}
+  .panel{background:var(--card);border:1px solid var(--line);border-radius:14px;padding:16px;margin-bottom:16px}
+  .panel h3{font-size:14px;font-weight:700;margin-bottom:10px}
+  .frow{display:flex;gap:12px;align-items:flex-end;flex-wrap:wrap}
+  .field label{display:block;font-size:11px;color:var(--muted);text-transform:uppercase;letter-spacing:.04em;margin-bottom:4px}
+  .field input,.field select{border:1px solid var(--line);border-radius:8px;padding:8px 10px;font-size:13.5px;font-variant-numeric:tabular-nums;background:#fff}
+  .field select{min-width:230px}.field input{width:110px}
+  table{width:100%;border-collapse:collapse;font-size:12.5px}
+  th,td{text-align:left;padding:7px 8px;border-bottom:1px solid var(--line);font-variant-numeric:tabular-nums;vertical-align:top}
+  th{color:var(--muted);font-size:11px;text-transform:uppercase;letter-spacing:.03em}
+  td.num,th.num{text-align:right}
+  td.who{font-weight:800}
+  .p1{color:#0e7490}.p2{color:#b45309}.p3{color:#7c3aed}
+  .kpis{display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:12px;margin-bottom:16px}
+  .kpi{background:var(--card);border:1px solid var(--line);border-radius:12px;padding:13px}
+  .kpi .lb{font-size:10.5px;color:var(--muted);text-transform:uppercase;letter-spacing:.04em}
+  .kpi .vl{font-size:22px;font-weight:800;margin-top:3px;font-variant-numeric:tabular-nums}
+  .kpi .sub{font-size:11px;color:var(--muted);margin-top:1px}
+  .btn{border:none;border-radius:8px;padding:8px 13px;font-size:12.5px;font-weight:700;cursor:pointer;background:var(--brand);color:#fff}
+  .btn.ghost{background:#fff;border:1px solid var(--line);color:var(--brand)}
+  .btn:hover{background:var(--brand2);color:#fff}
+  .note{font-size:11.5px;color:var(--muted);margin-top:10px;line-height:1.6}
+  .tblwrap{overflow-x:auto}
+  .legend{display:flex;gap:14px;flex-wrap:wrap;font-size:12px;margin-top:10px}
+  .legend b{font-weight:800}
+  footer{text-align:center;color:var(--muted);font-size:11.5px;padding:22px}
+</style>
+</head>
+<body>
+<header>
+  <h1>Product Cleaning Scheduler</h1>
+  <p>Product to product changeover cleaning for granulation equipment, built from the cleaning parameters guide with SOP references OI-04, OI-05, OI-30, OI-36 and OI-32. Pick the model, give a start time, and every component gets a From and To as hh:mm. The validated scrubbing time never changes, so adding people only parallelises the work and shortens the finish.</p>
+</header>
+<div class="wrap">
+  <div class="panel">
+    <h3>Equipment and crew</h3>
+    <div class="frow">
+      <div class="field"><label>Equipment</label><select id="group"></select></div>
+      <div class="field"><label>Model</label><select id="model"></select></div>
+      <div class="field"><label>Start time, hh:mm</label><input id="start" value="06:00"></div>
+      <div class="field"><label>People</label><input id="people" type="number" min="1" step="1" value="1"></div>
+      <button id="reset" class="btn ghost">Reset</button>
+    </div>
+    <div class="legend">
+      <span><b class="p1">Person 1</b></span><span><b class="p2">Person 2</b></span><span><b class="p3">Person 3 and up</b></span>
+    </div>
+  </div>
+
+  <div class="kpis" id="kpis"></div>
+
+  <div class="panel">
+    <h3 id="tblTitle">Cleaning schedule</h3>
+    <div class="tblwrap">
+      <table>
+        <thead><tr>
+          <th>Clean</th><th>Component / part</th><th class="num">Qty</th>
+          <th class="num">1st wash kg</th><th class="num">Teepol ml</th><th class="num">Scrub min</th>
+          <th class="num">2nd wash kg</th><th class="num">Pure rinse kg</th>
+          <th>Person</th><th>From</th><th>To</th>
+        </tr></thead>
+        <tbody id="rows"></tbody>
+      </table>
+    </div>
+    <div class="note">Scrub min is the validated scrubbing time and is never shortened. Uncheck a row to leave that part out. With one person the tasks run one after another, with two or more the longest tasks start first and each next task goes to the person who is free soonest, which is the shortest finish for the given crew.</div>
+  </div>
+</div>
+<footer>product-cleaning-scheduler &middot; validated scrubbing times preserved &middot; all entries stay in the browser</footer>
+<script>
+const EQUIPMENT={
+  "Saizoner Mixer Granulator (SMG)": {sop: "OI-04", models: {
+    "SMG-1300L": [["Discharge port assembly", 1, 45, 280, 20, 30, 30], ["Platform, guards, staircase, machine base, CIP system, Impeller, vacuum transfer pipes, SS wire conduits", 1, 89, 180, 40, 68, 56], ["Chopper assembly", 1, 15, 180, 15, 12, 12], ["Agitator", 1, 35, 500, 20, 25, 20], ["Cone and wing bolt", 1, 16, 210, 20, 10, 10], ["Gaskets (lid inflatable, view window, charging valves)", 1, 15, 140, 13.5, 9, 9], ["Main body, Bowl, vacuum transfer pipes, CIP nozzles, chopper motor housing", 1, 100, 1950, 70, 100, 100], ["Co-mill assembly (wing nut, blade, cone hub, screen, motor housing, discharge hopper)", 1, 15, 350, 32, 15, 15], ["Lid (charging valves, vent filter, view window glass assembly)", 1, 100, 6000, 35, 100, 50], ["Spray gun assembly (binder transfer pipe, peristaltic pump)", 1, 30, 800, 35, 20, 20], ["Clamps, bolts, nuts", 1, 10, 1500, 8, 10, 10]],
+    "SMG-1000L": [["Discharge port assembly", 1, 40, 2500, 15, 30, 25], ["Agitator", 1, 45, 1200, 40, 30, 15], ["Platform, guards, staircase, machine base, CIP system, Impeller, vacuum transfer pipes, SS wire conduits", 1, 75, 1800, 40, 75, 40], ["Chopper", 1, 15, 1600, 15, 12, 8], ["Cone and wing bolt", 1, 15, 2000, 20, 12, 10], ["Gaskets (lid gasket, view window gasket, charging valve gasket)", 1, 15, 1200, 13, 15, 7], ["Main body, bowl, vacuum transfer pipes, CIP nozzles, chopper motor housing, hose pipes", 1, 150, 1700, 60, 150, 75], ["Elevator assembly", 1, 20, 1500, 10, 15, 10], ["Co-mill assembly (wing nut, blade, cone hub, screen, motor housing, discharge hopper)", 1, 10, 3000, 30, 19, 10], ["Lid (charging valves, vent filter, view window glass assembly)", 1, 75, 5000, 32, 75, 45], ["Clamps, bolts, nuts", 1, 10, 1500, 10, 8, 8]],
+    "SMG-150L": [["Discharge port assembly", 1, 20, 1500, 20, 20, 20], ["Platform, guards, staircase, machine base, CIP system, Impeller, vacuum transfer pipes, SS wire conduits", 1, 20, 2000, 30, 20, 20], ["Chopper blade and hub cone", 1, 10, 1000, 10, 10, 10], ["Agitator blade, Cone and wing bolt", 1, 10, 1000, 25, 10, 10], ["Lid (lid, lid gasket and product charging valve gasket)", 1, 15, 1000, 30, 15, 15], ["Main body, bowl, CIP nozzles, and chopper motor housing", 1, 100, 1500, 60, 120, 100], ["Co-mill assembly (wing nut, comill blade, cone hub, screen, motor housing, discharge hopper)", 1, 15, 1600, 40, 15, 15], ["Lid (charging valves, vent filter, view window glass assembly)", 1, 20, 2000, 30, 20, 20], ["Spray gun assembly (binder transfer pipe, peristaltic pump)", 1, 10, 500, 25, 10, 10], ["Clamps, bolts, nuts", 1, 10, 1000, 25, 10, 10]]
+  }},
+  "Fluid Bed Equipment (FBE)": {sop: "OI-05", models: {
+    "FBE-1300L": [["External surface of Retarding Chamber, explosion duct, actuators, air inlet, charging valve, outlet ducts", 1, 150, 2000, 20, 150, 120], ["Inside surface of expansion chamber and filter housing unit", 1, 140, 2500, 20, 86, 60], ["Lower plenum (inlet air duct along with damper, gasket)", 1, 85, 1000, 10, 78, 80], ["Product Bowl, product container mesh, dutch woven sieve, discharge valve assembly, trolley", 1, 70, 1000, 20, 68, 45], ["Gaskets", 1, 10, 500, 2, 10, 10], ["Spraying gun assembly", 1, 34, 100, 5, 34, 20], ["Filter frame, filter suspending ring, lock, flap and carbine hooks", 1, 56, 500, 10, 38, 38], ["View window glass, product temperature probe, sampling port, ring, sieve plate, nuts and screws", 1, 80, 500, 15, 60, 42], ["Hose pipe assembly", 1, 5, 200, 5, 5, 5]],
+    "FBE-800L": [["External surface of Retarding Chamber, explosion duct, actuators, air inlet", 1, 100, 1000, 10, 100, 50], ["Inside surface of expansion chamber and filter housing unit", 1, 100, 750, 10, 60, 40], ["Lower plenum (inlet air duct along with damper, gasket)", 1, 40, 100, 2, 35, 35], ["Product Bowl, product container mesh, dutch woven sieve and trolley", 1, 40, 100, 2, 35, 35], ["Gaskets", 1, 5, 75, 1, 5, 5], ["Spraying gun assembly", 1, 20, 50, 2, 20, 15], ["Filter frame, filter suspending ring, lock and carbine hooks", 1, 20, 200, 2, 15, 15], ["View window glass, product temperature probe, sampling port, ring, sieve plate, nuts and screws", 1, 20, 200, 4, 15, 12]],
+    "FBE-125L (MFBE-05)": [["Inside surface of expansion chamber and filter housing unit", 1, 40, 300, 40, 40, 35]]
+  }},
+  "Gerteis Roll Compactor (Macro-Pactor)": {sop: "OI-30", models: {
+    "Macro-Pactor": [["Inlet hopper", 1, 10, 2000, 15, 5, 3], ["Telescopic agitator", 1, 5, 1000, 10, 3, 2], ["Feed hopper", 1, 10, 2000, 15, 5, 3], ["Small quantity funnel assembly", 1, 5, 1000, 15, 3, 2], ["Feed auger", 1, 5, 1000, 10, 3, 2], ["Tamp auger", 2, 10, 2000, 20, 5, 3], ["Diverter tube assembly and filter element", 1, 5, 1000, 10, 3, 2], ["Side seal assembly, SS shoulders, Teflon strips, silicon rods, POM side plates, sintered metal filter", 1, 5, 1000, 25, 3, 2], ["Scrappers and scrapper accessories", 2, 10, 2000, 30, 5, 3], ["Press rollers and roller accessories", 2, 20, 4000, 30, 10, 10], ["Deflector plate of granulator", 2, 5, 1000, 10, 5, 3], ["Screen", 1, 10, 2000, 10, 5, 3], ["Screen support and accessories", 1, 10, 2000, 10, 5, 3], ["Positioning tube", 1, 5, 1000, 10, 3, 2], ["Granules sample drawer", 1, 5, 1000, 5, 3, 2], ["Granulator and accessories", 2, 10, 2000, 15, 5, 5], ["POM filters and accessories", 1, 5, 1000, 10, 5, 2], ["Outlet funnel / discharge hopper and accessories", 1, 10, 2000, 20, 5, 2], ["Front door and accessories", 1, 10, 2000, 10, 5, 3], ["Process housing", 1, 40, 8000, 40, 20, 15], ["Air circulation pipes", 1, 10, 2000, 10, 5, 5], ["Lip seals, Teflon rods, silicon strips", 1, 5, 1000, 15, 5, 5], ["Beneath the equipment", 1, 20, 4000, 20, 10, 10]]
+  }},
+  "Conical Sieve Mill": {sop: "OI-36", models: {
+    "Conical Sieve Mill": [["In feed chute and its clamp / Frewitt Charging Cone", 1, 34, 500, 20, 30, 28], ["Impeller / rotor and screw", 1, 28, 450, 15, 26, 25], ["Impeller shaft", 1, 16, 300, 10, 15, 12], ["Screen", 1, 3, 300, 10, 3, 2], ["O-ring", 1, 12, 200, 10, 12, 10], ["Clamps", 1, 7, 200, 20, 7, 5]]
+  }},
+  "Quadro Co-Mill U 20": {sop: "OI-32", models: {
+    "Quadro U 20": [["Gearbox and grid mesh", 1, 0, 0, 20, 0, 0], ["Housing body", 1, 0, 0, 15, 0, 0], ["Screen", 1, 0, 0, 10, 0, 0], ["Impeller and screw", 1, 0, 0, 6, 0, 0]]
+  }}
+};
+const $=id=>document.getElementById(id);
+function pad(n){return String(n).padStart(2,"0");}
+function hhmm(min){const m=((Math.round(min)%1440)+1440)%1440;return pad(Math.floor(m/60))+":"+pad(m%60);}
+function phhmm(s){const m=/^(\d{1,2}):(\d{2})$/.exec((s||"").trim());if(!m)return null;const h=+m[1],mi=+m[2];if(h>23||mi>59)return null;return h*60+mi;}
+function schedule(tasks,people,startMin){
+  if(!tasks.length)return {assignments:[],makespan:0,finish:hhmm(startMin),people:0,total:0};
+  people=Math.max(1,Math.min(people,tasks.length));
+  const loads=Array(people).fill(0),owner={};
+  tasks.map((t,i)=>i).sort((a,b)=>tasks[b].scrub-tasks[a].scrub).forEach(i=>{
+    let p=0;for(let j=1;j<people;j++)if(loads[j]<loads[p])p=j;
+    owner[i]=p;loads[p]+=tasks[i].scrub;
+  });
+  const cursor=Array(people).fill(startMin),assignments=[];
+  tasks.map((t,i)=>i).forEach(i=>{
+    const p=owner[i],dur=tasks[i].scrub;
+    assignments.push({index:i,person:p+1,start:hhmm(cursor[p]),end:hhmm(cursor[p]+dur),duration:dur});
+    cursor[p]+=dur;
+  });
+  const makespan=Math.max.apply(null,loads);
+  return {assignments:assignments,makespan:makespan,finish:hhmm(startMin+makespan),people:people,
+          total:tasks.reduce((a,t)=>a+t.scrub,0)};
+}
+const PERSON_CLASS=["p1","p2","p3"];
+function fillGroups(){
+  $("group").innerHTML=Object.keys(EQUIPMENT).map(g=>'<option>'+g+'</option>').join("");
+}
+function fillModels(){
+  const g=$("group").value;
+  $("model").innerHTML=Object.keys(EQUIPMENT[g].models).map(m=>'<option>'+m+'</option>').join("");
+}
+function buildRows(){
+  const g=$("group").value,m=$("model").value;
+  const rows=EQUIPMENT[g].models[m];
+  $("tblTitle").textContent=m+" cleaning schedule, SOP "+EQUIPMENT[g].sop;
+  $("rows").innerHTML=rows.map((r,i)=>
+    '<tr><td><input type="checkbox" class="use" checked data-i="'+i+'"></td>'+
+    '<td>'+r[0]+'</td>'+
+    '<td class="num">'+r[1]+'</td>'+
+    '<td class="num">'+r[2]+'</td>'+
+    '<td class="num">'+r[3]+'</td>'+
+    '<td class="num">'+r[4]+'</td>'+
+    '<td class="num">'+r[5]+'</td>'+
+    '<td class="num">'+r[6]+'</td>'+
+    '<td class="who person"></td><td class="from"></td><td class="to"></td></tr>').join("");
+  $("rows").querySelectorAll(".use").forEach(c=>c.addEventListener("change",compute));
+}
+function compute(){
+  const g=$("group").value,m=$("model").value;
+  const rows=EQUIPMENT[g].models[m];
+  const people=Math.max(1,parseInt($("people").value||"1",10)||1);
+  const start=phhmm($("start").value);
+  const checked=[...$("rows").querySelectorAll(".use")].map(c=>c.checked);
+  const tasks=[],rowOf=[];
+  rows.forEach((r,i)=>{ if(checked[i]){ tasks.push({scrub:r[4]}); rowOf.push(i); } });
+  const startMin=start==null?0:start;
+  const res=schedule(tasks,people,startMin);
+  const trs=$("rows").querySelectorAll("tr");
+  trs.forEach(tr=>{tr.querySelector(".person").textContent="";tr.querySelector(".person").className="who person";
+    tr.querySelector(".from").textContent="";tr.querySelector(".to").textContent="";});
+  res.assignments.forEach((a,k)=>{
+    const tr=trs[rowOf[k]];
+    const cell=tr.querySelector(".person");
+    cell.textContent="P"+a.person;
+    cell.className="who person "+(PERSON_CLASS[Math.min(a.person-1,2)]);
+    tr.querySelector(".from").textContent=a.start;
+    tr.querySelector(".to").textContent=a.end;
+  });
+  let p1=0,teepol=0,p2=0,pure=0;
+  rows.forEach((r,i)=>{if(checked[i]){p1+=r[2];teepol+=r[3];p2+=r[5];pure+=r[6];}});
+  $("kpis").innerHTML=
+    kpi("Validated work",res.total+" min",tasks.length+" parts to clean")+
+    kpi("People",res.people,"crews working in parallel")+
+    kpi("Finish time",start==null?"set a start":res.finish,"wall clock hh:mm")+
+    kpi("Elapsed",res.makespan+" min",res.people>1?"parallel schedule":"one person, one after another")+
+    kpi("1st wash water",Math.round(p1*10)/10+" kg","potable")+
+    kpi("Teepol 0.1%",Math.round(teepol*10)/10+" ml","solution")+
+    kpi("2nd wash water",Math.round(p2*10)/10+" kg","potable")+
+    kpi("Final rinse",Math.round(pure*10)/10+" kg","purified water");
+}
+function kpi(lb,vl,sub){return '<div class="kpi"><div class="lb">'+lb+'</div><div class="vl">'+vl+'</div><div class="sub">'+sub+'</div></div>';}
+$("group").addEventListener("change",()=>{fillModels();buildRows();compute();});
+$("model").addEventListener("change",()=>{buildRows();compute();});
+["start","people"].forEach(id=>$(id).addEventListener("input",compute));
+$("reset").addEventListener("click",()=>{$("start").value="06:00";$("people").value="1";compute();});
+fillGroups();fillModels();buildRows();
+if(location.search.includes("demo")){$("people").value="2";}
+compute();
+</script>
+</body>
+</html>
